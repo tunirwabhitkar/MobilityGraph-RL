@@ -1,0 +1,33 @@
+# Data Processing & ML
+numpy
+pandas
+scikit-learn
+xgboost
+
+# Graph ML & Deep Learning
+torch
+torch_geometric
+networkx
+
+# Optimization
+ortools
+
+# Reinforcement Learning
+gymnasium
+stable-baselines3
+
+# Geospatial & Visualization
+geopandas
+folium
+matplotlib
+seaborn
+plotly
+
+# APIs & Dashboards
+fastapi
+uvicorn
+streamlit
+
+# Testing & Monitoring
+pytest
+evidently

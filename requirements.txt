@@ -1,33 +1,37 @@
 # Data Processing & ML
-numpy
-pandas
-scikit-learn
-xgboost
+numpy>=1.24.0,<2.0.0
+pandas>=2.0.0
+scikit-learn>=1.2.0
+xgboost>=1.7.0
 
 # Graph ML & Deep Learning
-torch
-torch_geometric
-networkx
+torch>=2.0.0,<3.0.0
+torch_geometric>=2.3.0
+networkx>=3.0.0
 
 # Optimization
-ortools
+ortools>=9.5.0
 
 # Reinforcement Learning
-gymnasium
-stable-baselines3
+gymnasium>=0.28.1
+stable-baselines3>=2.0.0
 
 # Geospatial & Visualization
-geopandas
-folium
-matplotlib
-seaborn
-plotly
+geopandas>=0.13.0
+folium>=0.14.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.14.0
 
 # APIs & Dashboards
-fastapi
-uvicorn
-streamlit
+fastapi>=0.95.0
+uvicorn>=0.22.0
+streamlit>=1.22.0
 
 # Testing & Monitoring
-pytest
-evidently
+pytest>=7.3.0
+evidently>=0.3.0
+
+# Utilities
+joblib>=1.2.0
+pyyaml>=6.0.0

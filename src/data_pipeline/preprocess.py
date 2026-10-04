@@ -1,6 +1,9 @@
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from typing import Tuple, Optional
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s: %(message)s')
 
 class DataPreprocessor:
     def __init__(self, train_ratio: float = 0.7, val_ratio: float = 0.15):
@@ -51,7 +54,10 @@ if __name__ == "__main__":
         cols_to_scale = ['temperature', 'precipitation']
         train, val, test = processor.scale(train, val, test, cols_to_scale)
         
-        print(f"Data split shapes - Train: {train.shape}, Val: {val.shape}, Test: {test.shape}")
+        import joblib
+        joblib.dump(processor.scaler, 'data/processed/scaler.pkl')
+        
+        logging.info(f"Data split shapes - Train: {train.shape}, Val: {val.shape}, Test: {test.shape}")
         
         # Save split data
         train.to_csv('data/processed/train.csv', index=False)

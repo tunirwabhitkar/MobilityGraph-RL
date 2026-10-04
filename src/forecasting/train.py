@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 from typing import Tuple, List
@@ -65,22 +66,27 @@ def train_st_gnn(model, X_train, y_train, edge_index, edge_weights=None, epochs=
             optimizer.zero_grad()
             
             # Note: batch_X is [batch_size, num_zones, seq_len, num_features]
-            # Since graph is identical for all samples, we can either process each item in batch 
-            # or treat batch * num_zones as independent nodes (with disconnected components).
-            # For simplicity in this demo, we loop over batch or adapt GNN forward.
+            # Vectorized batch processing
+            bs, num_zones, seq_len, num_features = batch_X.shape
+            batch_X_reshaped = batch_X.view(bs * num_zones, seq_len, num_features)
             
-            batch_loss = 0
-            for i in range(batch_X.size(0)):
-                out = model(batch_X[i], edge_index, edge_weights)
-                loss = criterion(out, batch_y[i])
-                batch_loss += loss
+            # Duplicate edge_index for the batch to create disjoint subgraphs
+            edge_index_batched = torch.cat([edge_index + b * num_zones for b in range(bs)], dim=1)
+            
+            if edge_weights is not None:
+                edge_weights_batched = edge_weights.repeat(bs)
+            else:
+                edge_weights_batched = None
                 
-            batch_loss = batch_loss / batch_X.size(0)
-            batch_loss.backward()
+            out = model(batch_X_reshaped, edge_index_batched, edge_weights_batched)
+            out = out.view(bs, num_zones, -1)
+            
+            loss = criterion(out, batch_y)
+            loss.backward()
             optimizer.step()
             
-            epoch_loss += batch_loss.item()
+            epoch_loss += loss.item()
             
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss/len(loader):.4f}")
+        logging.info(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss/len(loader):.4f}")
     
     return model

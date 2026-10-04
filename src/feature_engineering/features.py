@@ -1,4 +1,7 @@
 import pandas as pd
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s: %(message)s')
 
 class FeatureEngineer:
     """
@@ -48,6 +51,6 @@ if __name__ == "__main__":
         df = pd.read_csv('data/processed/demand.csv', parse_dates=['timestamp'])
         engineer = FeatureEngineer()
         df_featured = engineer.engineer_features(df)
-        print(f"Original shape: {df.shape}")
-        print(f"Featured shape: {df_featured.shape}")
+        logging.info(f"Original shape: {df.shape}")
+        logging.info(f"Featured shape: {df_featured.shape}")
         df_featured.to_csv('data/processed/demand_featured.csv', index=False)

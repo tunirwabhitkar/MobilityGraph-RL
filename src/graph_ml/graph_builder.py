@@ -1,14 +1,15 @@
+import logging
 import numpy as np
 import pandas as pd
 import torch
-from scipy.spatial.distance import cdist
+from sklearn.metrics.pairwise import haversine_distances
 from typing import Tuple, Optional
 
 class GraphBuilder:
     """
     Constructs a spatial graph from geographic zones.
     """
-    def __init__(self, method: str = 'knn', k: int = 5, distance_threshold: float = 0.05):
+    def __init__(self, method: str = 'knn', k: int = 5, distance_threshold: float = 5.0):
         self.method = method
         self.k = k
         self.distance_threshold = distance_threshold
@@ -24,8 +25,9 @@ class GraphBuilder:
         coords = zones_df[['latitude', 'longitude']].values
         num_nodes = len(coords)
         
-        # Calculate pairwise Euclidean distances (using lat/lon approx for small city scale)
-        dist_matrix = cdist(coords, coords, metric='euclidean')
+        # Calculate pairwise Haversine distances in kilometers
+        coords_rad = np.radians(coords)
+        dist_matrix = haversine_distances(coords_rad, coords_rad) * 6371.0
         
         adj_matrix = np.zeros((num_nodes, num_nodes))
         
@@ -58,12 +60,13 @@ class GraphBuilder:
 
 if __name__ == "__main__":
     import os
+    logging.basicConfig(level=logging.INFO)
     if os.path.exists('data/processed/zones.csv'):
         zones_df = pd.read_csv('data/processed/zones.csv')
         builder = GraphBuilder(method='knn', k=4)
         adj, edge_index, edge_weights = builder.build_graph(zones_df)
         
-        print(f"Built graph with {len(zones_df)} nodes and {edge_index.shape[1]} edges.")
+        logging.info(f"Built graph with {len(zones_df)} nodes and {edge_index.shape[1]} edges.")
         
         # Save graph components
         torch.save({'edge_index': edge_index, 'edge_weights': edge_weights}, 'data/processed/graph.pt')

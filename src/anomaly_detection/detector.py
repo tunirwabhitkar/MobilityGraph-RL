@@ -23,10 +23,11 @@ class AnomalyDetector:
         """
         residuals = actual - expected
         
-        # Z-score based detection
-        mean_res = np.mean(residuals)
-        std_res = np.std(residuals)
-        z_scores = (residuals - mean_res) / (std_res + 1e-8)
+        # Z-score based detection (using rolling to prevent data leakage)
+        res_series = pd.Series(residuals)
+        rolling_mean = res_series.rolling(window=24, min_periods=1).mean().values
+        rolling_std = res_series.rolling(window=24, min_periods=1).std().fillna(0).values
+        z_scores = (residuals - rolling_mean) / (rolling_std + 1e-8)
         z_anomaly = np.abs(z_scores) > self.z_threshold
         
         # Isolation Forest detection

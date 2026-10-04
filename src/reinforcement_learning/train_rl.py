@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 from stable_baselines3 import PPO
@@ -24,17 +25,18 @@ def train_ppo(demand_data: np.ndarray, supply_data: np.ndarray, dist_matrix: np.
     # Initialize PPO
     model = PPO("MlpPolicy", env, verbose=1, learning_rate=3e-4, n_steps=2048, batch_size=64)
     
-    print(f"Training PPO for {total_timesteps} timesteps...")
+    logging.info(f"Training PPO for {total_timesteps} timesteps...")
     model.learn(total_timesteps=total_timesteps)
     
     # Ensure directory exists
     os.makedirs(os.path.dirname(model_save_path), exist_ok=True)
     model.save(model_save_path)
-    print(f"Model saved to {model_save_path}.zip")
+    logging.info(f"Model saved to {model_save_path}.zip")
     
     return model
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     # Example usage if data exists
     if os.path.exists('data/processed/demand.csv') and os.path.exists('data/processed/adj_matrix.npy'):
         demand_df = pd.read_csv('data/processed/demand.csv')

@@ -10,6 +10,7 @@ class MobilityRebalancingEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
     def __init__(self, demand_data: np.ndarray, supply_data: np.ndarray, dist_matrix: np.ndarray, 
+                 zone_capacities: np.ndarray = None,
                  max_relocations_per_step: int = 50, cost_per_km: float = 0.5, unmet_penalty: float = 10.0):
         super().__init__()
         
@@ -20,13 +21,18 @@ class MobilityRebalancingEnv(gym.Env):
         self.num_steps, self.num_zones = demand_data.shape
         self.current_step = 0
         
+        if zone_capacities is None:
+            self.zone_capacities = np.ones(self.num_zones) * 100
+        else:
+            self.zone_capacities = zone_capacities
+            
         self.max_relocations = max_relocations_per_step
         self.cost_per_km = cost_per_km
         self.unmet_penalty = unmet_penalty
         
-        # Action space: percentage of available fleet to move from i to j
-        # shape: (num_zones, num_zones)
-        self.action_space = spaces.Box(low=0.0, high=1.0, shape=(self.num_zones, self.num_zones), dtype=np.float32)
+        # Action space: desired change in supply per zone (normalized)
+        # shape: (num_zones,)
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_zones,), dtype=np.float32)
         
         # Observation space: 
         # [demand_t, supply_t, time_of_day]
@@ -48,26 +54,33 @@ class MobilityRebalancingEnv(gym.Env):
         return np.concatenate([demand, self.current_supply, [time_of_day]]).astype(np.float32)
 
     def step(self, action):
-        # Action is [num_zones, num_zones] in [0, 1]
-        # We need to ensure we don't move more than available supply at node i
-        # action[i, j] represents the fraction of supply[i] to move to j
-        # Normalize actions out of i so they sum to <= 1
-        row_sums = action.sum(axis=1, keepdims=True)
-        # Avoid division by zero
-        row_sums[row_sums == 0] = 1.0
-        # If sum > 1, normalize. If <= 1, keep as is
-        norm_action = np.where(row_sums > 1.0, action / row_sums, action)
+        # Action is [num_zones] in [-1.0, 1.0]
+        delta = action * self.max_relocations
         
-        # Calculate relocations
-        # Zero out diagonal
-        np.fill_diagonal(norm_action, 0)
-        relocations = np.floor(norm_action * self.current_supply[:, None])
+        push = np.where(delta < 0, -delta, 0)
+        pull = np.where(delta > 0, delta, 0)
         
-        # Apply relocations
-        moved_out = relocations.sum(axis=1)
-        moved_in = relocations.sum(axis=0)
+        push = np.minimum(push, self.current_supply)
+        available_space = np.maximum(0, self.zone_capacities - self.current_supply)
+        pull = np.minimum(pull, available_space)
         
-        self.current_supply = self.current_supply - moved_out + moved_in
+        total_push = np.sum(push)
+        total_pull = np.sum(pull)
+        
+        transfer_volume = min(total_push, total_pull)
+        
+        if transfer_volume > 0:
+            push = push * (transfer_volume / total_push)
+            pull = pull * (transfer_volume / total_pull)
+            self.current_supply = self.current_supply - push + pull
+            
+            # Approximate relocation cost
+            avg_dist = np.mean(self.dist_matrix)
+            relocation_cost = transfer_volume * avg_dist * self.cost_per_km
+            total_relocations = transfer_volume
+        else:
+            relocation_cost = 0.0
+            total_relocations = 0.0
         
         # Calculate Reward
         current_demand = self.demand_data[self.current_step]
@@ -75,7 +88,6 @@ class MobilityRebalancingEnv(gym.Env):
         unmet_demand = np.maximum(0, current_demand - self.current_supply)
         total_unmet = np.sum(unmet_demand)
         
-        relocation_cost = np.sum(relocations * self.dist_matrix) * self.cost_per_km
         
         reward = -(total_unmet * self.unmet_penalty + relocation_cost)
         
@@ -100,7 +112,7 @@ class MobilityRebalancingEnv(gym.Env):
             'unmet_demand': total_unmet,
             'relocation_cost': relocation_cost,
             'saved_unmet': saved_unmet,
-            'total_relocations': np.sum(relocations)
+            'total_relocations': total_relocations
         }
         
         return self._get_obs(), reward, terminated, truncated, info

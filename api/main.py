@@ -1,8 +1,23 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import numpy as np
+import torch
+import os
+from src.forecasting.st_gnn import SpatioTemporalGCN
 
 app = FastAPI(title="MobilityGraph-RL API", version="1.0")
+
+NUM_ZONES = 25
+NUM_FEATURES = 5 # Example number of features
+
+model = SpatioTemporalGCN(num_node_features=NUM_FEATURES)
+MODEL_PATH = "data/models/st_gnn.pth"
+if os.path.exists(MODEL_PATH):
+    model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu')))
+model.eval()
+
+# Dummy static graph for inference (in a real app, this is built from zones)
+dummy_edge_index = torch.randint(0, NUM_ZONES, (2, 50))
 
 class ForecastRequest(BaseModel):
     zone_id: str
@@ -30,15 +45,28 @@ def health_check():
 
 @app.post("/forecast", response_model=ForecastResponse)
 def get_forecast(req: ForecastRequest):
-    # In a real app, this would query the loaded ST-GNN model
-    # Mock response for architecture completeness
-    predicted = float(np.random.poisson(100))
+    # In a real app, we would query the feature store for the last `seq_len` timesteps for all zones
+    dummy_x = torch.randn(NUM_ZONES, 24, NUM_FEATURES)
+    
+    with torch.no_grad():
+        mean_pred, lower_bound, upper_bound = model.predict_with_uncertainty(dummy_x, dummy_edge_index, n_samples=10)
+        
+    try:
+        zone_idx = int(req.zone_id)
+    except ValueError:
+        zone_idx = 0
+    zone_idx = min(max(0, zone_idx), NUM_ZONES - 1)
+    
+    predicted = float(mean_pred[zone_idx, 0].item())
+    lb = float(lower_bound[zone_idx, 0].item())
+    ub = float(upper_bound[zone_idx, 0].item())
+
     return ForecastResponse(
         zone_id=req.zone_id,
         forecast_horizon=req.forecast_horizon,
-        predicted_demand=predicted,
-        lower_bound=max(0, predicted - 20),
-        upper_bound=predicted + 20
+        predicted_demand=max(0.0, predicted),
+        lower_bound=max(0.0, lb),
+        upper_bound=max(0.0, ub)
     )
 
 @app.post("/optimize-rebalancing", response_model=OptimizeResponse)

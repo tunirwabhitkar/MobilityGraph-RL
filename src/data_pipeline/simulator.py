@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 from typing import Tuple
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s: %(message)s')
 
 class MobilityDataSimulator:
     """
@@ -11,17 +14,17 @@ class MobilityDataSimulator:
         self.num_days = num_days
         self.num_hours = num_days * 24
         self.seed = seed
-        np.random.seed(self.seed)
+        self.rng = np.random.default_rng(self.seed)
         
     def generate_zones(self) -> pd.DataFrame:
         """Generates random coordinates for zones within a city-like grid."""
         # Assume a city area of roughly 10x10 km
-        lats = np.random.uniform(40.70, 40.80, self.num_zones)
-        lons = np.random.uniform(-74.05, -73.95, self.num_zones)
+        lats = self.rng.uniform(40.70, 40.80, self.num_zones)
+        lons = self.rng.uniform(-74.05, -73.95, self.num_zones)
         
         # Base demand characteristics per zone
         # Some zones are high demand (commercial), some low (residential)
-        zone_types = np.random.choice(['residential', 'commercial', 'mixed'], self.num_zones, p=[0.5, 0.2, 0.3])
+        zone_types = self.rng.choice(['residential', 'commercial', 'mixed'], self.num_zones, p=[0.5, 0.2, 0.3])
         base_demand_multiplier = np.where(zone_types == 'commercial', 2.5, 
                                           np.where(zone_types == 'residential', 1.0, 1.5))
         
@@ -45,10 +48,10 @@ class MobilityDataSimulator:
         # Simulate weather: temp varies daily and seasonally
         base_temp = 15.0 + 10.0 * np.sin(2 * np.pi * df['timestamp'].dt.dayofyear / 365.0)
         daily_variation = 5.0 * np.sin(2 * np.pi * (df['hour'] - 6) / 24.0)
-        df['temperature'] = base_temp + daily_variation + np.random.normal(0, 2, self.num_hours)
+        df['temperature'] = base_temp + daily_variation + self.rng.normal(0, 2, self.num_hours)
         
         # Precipitation probability
-        df['precipitation'] = np.where(np.random.random(self.num_hours) < 0.1, np.random.exponential(5, self.num_hours), 0)
+        df['precipitation'] = np.where(self.rng.random(self.num_hours) < 0.1, self.rng.exponential(5, self.num_hours), 0)
         
         return df
 
@@ -83,10 +86,10 @@ class MobilityDataSimulator:
                 
                 # Combine effects with some noise
                 mean_demand = 10 * base * hour_factor * weekend_factor * weather_factor
-                actual_demand = max(0, int(np.random.poisson(mean_demand)))
+                actual_demand = max(0, int(self.rng.poisson(mean_demand)))
                 
                 # Fleet state simulation
-                available_vehicles = max(0, int(actual_demand + np.random.normal(5, 10))) # Some gap naturally occurs
+                available_vehicles = max(0, int(actual_demand + self.rng.normal(5, 10))) # Some gap naturally occurs
                 
                 records.append({
                     'timestamp': t['timestamp'],
@@ -100,11 +103,11 @@ class MobilityDataSimulator:
         return pd.DataFrame(records)
 
     def run(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        print("Generating zones...")
+        logging.info("Generating zones...")
         zones = self.generate_zones()
-        print("Generating temporal features...")
+        logging.info("Generating temporal features...")
         time_features = self.generate_temporal_features()
-        print("Simulating demand and fleet states...")
+        logging.info("Simulating demand and fleet states...")
         demand = self.generate_demand(zones, time_features)
         return zones, demand
 
@@ -117,4 +120,4 @@ if __name__ == "__main__":
     os.makedirs('data/processed', exist_ok=True)
     zones.to_csv('data/processed/zones.csv', index=False)
     demand.to_csv('data/processed/demand.csv', index=False)
-    print("Simulation complete. Data saved to data/processed/")
+    logging.info("Simulation complete. Data saved to data/processed/")

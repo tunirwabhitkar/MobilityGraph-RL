@@ -67,6 +67,7 @@ class SpatioTemporalGCN(nn.Module):
         Monte Carlo Dropout for uncertainty estimation.
         Requires model to have training=True (handled manually here).
         """
+        was_training = self.training
         self.train() # Enable dropout
         predictions = []
         
@@ -83,6 +84,7 @@ class SpatioTemporalGCN(nn.Module):
         lower_bound = mean_pred - 1.96 * std_pred
         upper_bound = mean_pred + 1.96 * std_pred
         
-        self.eval() # Revert to eval mode
+        if not was_training:
+            self.eval() # Revert to previous mode
         
         return mean_pred, lower_bound, upper_bound

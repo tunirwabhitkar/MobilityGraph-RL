@@ -1,13 +1,21 @@
 <div align="center">
   <h1>🚀 MobilityGraph-RL</h1>
   <p><b>Urban Mobility Demand Forecasting & Dynamic Vehicle Rebalancing</b></p>
-  
-  ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
-  ![PyTorch](https://img.shields.io/badge/PyTorch-Geometric-ee4c2c.svg)
-  ![OR-Tools](https://img.shields.io/badge/Optimization-OR--Tools-blue.svg)
-  ![Stable-Baselines3](https://img.shields.io/badge/RL-Stable--Baselines3-brightgreen.svg)
-  ![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)
-  ![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B.svg)
+
+  <p>
+    <a href="https://mobilitygraph-rl.streamlit.app/">
+      <img src="https://img.shields.io/badge/🚀%20Live%20Demo-Streamlit-FF4B4B.svg" alt="Live Demo">
+    </a>
+  </p>
+
+  <p>
+    <img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python">
+    <img src="https://img.shields.io/badge/PyTorch-Geometric-ee4c2c.svg" alt="PyTorch">
+    <img src="https://img.shields.io/badge/Optimization-OR--Tools-blue.svg" alt="OR-Tools">
+    <img src="https://img.shields.io/badge/RL-Stable--Baselines3-brightgreen.svg" alt="Stable-Baselines3">
+    <img src="https://img.shields.io/badge/API-FastAPI-009688.svg" alt="FastAPI">
+    <img src="https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B.svg" alt="Streamlit">
+  </p>
 </div>
 
 ---
